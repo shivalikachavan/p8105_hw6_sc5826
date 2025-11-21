@@ -94,7 +94,7 @@ estimates_ORs_city |>
   xlab("Estimate of Odds Ratio of Homicide Solved, Male vs. Female (with 95% CI)")
 ```
 
-An odds ratio of 1 indicates that the odds of a homicide being solved are equal between male and female victims, keeping all other variables fixed (`age` and `race`). An odds ratio greater than 1 means that homicides where the victims are male have higher odds of being solved. An odds ratio less than 1 means that homicides where the victims are male have lower odds of being solved. If the CI does not cross 1, then it means that the calculated odds ratio is statistically significant. 
+An odds ratio of 1 indicates that the odds of a homicide being solved are equal between male and female victims, keeping all other variables fixed (`age` and `race`). An odds ratio greater than 1 (right of the red line) means that homicides where the victims are male have higher odds of being solved. An odds ratio less than 1 (left of the red line) means that homicides where the victims are male have lower odds of being solved. If the CI does not cross 1, then it means that the calculated odds ratio is statistically significant. 
 
 
 
