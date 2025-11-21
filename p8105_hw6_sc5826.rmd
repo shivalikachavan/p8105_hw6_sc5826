@@ -1,0 +1,100 @@
+---
+title: "HW 6"
+author: "Shivalika Chavan"
+date: "2025-11-21"
+output: github_document
+---
+
+```{r setup}
+library(tidyverse)
+
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(collapse = TRUE)
+knitr::opts_chunk$set(
+  fig.width = 8,
+  fig.asp = .6,
+  out.width = "90%"
+)
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+```
+
+#### Problem 1
+```{r}
+omitted_city_states = c("Dallas, TX", "Phoenix, AZ","Kansas City, MO", "Tulsa, AL")
+
+homicide_data = read.csv("./data/homicide-data.csv") |> 
+  janitor::clean_names() |> 
+  mutate(
+    city_state = paste0(city, ", ", state),
+    homicide_solved = as.numeric(disposition == "Closed by arrest"),
+    victim_age = if_else(victim_age == "Unknown", NA, victim_age),
+    victim_age = as.numeric(victim_age)
+  ) |> 
+  filter(
+    !(city_state %in% omitted_city_states)
+  )
+```
+
+Additional filtering for only Problem 1:
+```{r}
+homicide_data_problem_1 = 
+  homicide_data |> 
+  filter(victim_race %in% c("White", "Black"))
+```
+
+For Baltimore:
+```{r}
+homicide_data_1_glm = 
+  homicide_data_problem_1 |> 
+  filter(city_state == "Baltimore, MD") |> 
+  glm(formula = homicide_solved ~ victim_age + victim_sex + victim_race, data = _, family = binomial()) 
+
+estimate_CI_OR_sex = homicide_data_1_glm |> 
+  broom::tidy(conf.int = TRUE, exponentiate = TRUE) |>
+  filter(term == "victim_sexMale") |> 
+  select(estimate, conf.low, conf.high)
+
+estimate_CI_OR_sex
+```
+
+Mapping to all cities
+```{r}
+extract_estimate_OR_sex = function(city){
+  
+  estimates = 
+    homicide_data_problem_1 |>
+    filter(city_state == !!city) |>
+    glm(formula = homicide_solved ~ victim_age + victim_race + victim_sex, data = _, family = binomial()) |>
+    broom::tidy(conf.int = TRUE, exponentiate = TRUE) |>
+    filter(term == "victim_sexMale") |>
+    select(estimate, conf.low, conf.high)
+  
+  estimates
+  
+}
+
+estimates_ORs_city = 
+  tibble(
+    city = unique(pull(homicide_data_problem_1, city_state))
+    ) |> 
+  mutate(glm_model_estimates = map(city, extract_estimate_OR_sex)) |> 
+  unnest(glm_model_estimates)
+```
+
+Plotting:
+```{r fig.asp = 1}
+estimates_ORs_city |> 
+  mutate(city = fct_reorder(city, estimate)) |> 
+  ggplot(aes(x = estimate, y = city)) + 
+  geom_point() + 
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high)) +
+  geom_vline(xintercept = 1, color = "red") +
+  xlim(0, 4) +
+  ylab("City, State") +
+  xlab("Estimate of Odds Ratio of Homicide Solved, Male vs. Female (with 95% CI)")
+```
+
+An odds ratio of 1 indicates that the odds of a homicide being solved are equal between male and female victims, keeping all other variables fixed (`age` and `race`). An odds ratio greater than 1 means that homicides where the victims are male have higher odds of being solved. An odds ratio less than 1 means that homicides where the victims are male have lower odds of being solved. If the CI does not cross 1, then it means that the calculated odds ratio is statistically significant. 
+
+
+
