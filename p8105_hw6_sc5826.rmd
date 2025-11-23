@@ -7,6 +7,7 @@ output: github_document
 
 ```{r setup}
 library(tidyverse)
+library(p8105.datasets)
 
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(collapse = TRUE)
@@ -96,5 +97,52 @@ estimates_ORs_city |>
 
 An odds ratio of 1 indicates that the odds of a homicide being solved are equal between male and female victims, keeping all other variables fixed (`age` and `race`). An odds ratio greater than 1 (right of the red line) means that homicides where the victims are male have higher odds of being solved. An odds ratio less than 1 (left of the red line) means that homicides where the victims are male have lower odds of being solved. If the CI does not cross 1, then it means that the calculated odds ratio is statistically significant. 
 
+#### Problem 2
+```{r}
+data("weather_df")
 
+bootstrap_sample = function(df){
+  
+  slice_sample(df, prop = 1, replace = TRUE)
+  
+}
+
+weather_df_bootstrapped_samples = 
+  tibble(iter = 1:5000) |> 
+  mutate(
+    bootstrapped_sample = map(iter, \(i) bootstrap_sample(df = weather_df)),
+    sample_linear_models = map(bootstrapped_sample, \(df) lm(tmax~tmin + prcp, data = df)),
+    r_hat_sq = map(sample_linear_models, \(model) model |> broom::glance() |> pull(r.squared)),
+    beta_1_hat = map_dbl(sample_linear_models, \(model) model |> broom::tidy() |> filter(term == "tmin") |> pull(estimate)),
+    beta_2_hat = map_dbl(sample_linear_models, \(model) model |> broom::tidy() |> filter(term == "prcp") |> pull(estimate)),
+    beta_1_2_ratio = beta_1_hat / beta_2_hat
+  )
+```
+
+
+```{r}
+weather_df_bootstrapped_samples |> 
+  ggplot(aes(x = beta_1_hat)) + geom_density()
+
+weather_df_bootstrapped_samples |> 
+  ggplot(aes(x = beta_2_hat)) + geom_density()
+```
+
+β1 appears normally distributed around `r round(mean(pull(weather_df_bootstrapped_samples, beta_1_hat)), digits = 3)`. β2 also appears normally distributed around `r round(mean(pull(weather_df_bootstrapped_samples, beta_2_hat)), digits = 4)`.
+
+```{r}
+weather_df_bootstrapped_samples |> 
+  select(beta_1_hat, beta_2_hat) |> 
+  pivot_longer(
+    cols = c(beta_1_hat, beta_2_hat),
+    names_to = "estimate",
+    values_to = "value"
+  ) |> 
+  group_by(estimate) |> 
+  reframe(
+    ci.lower = quantile(value, probs = 0.025),
+    ci.upper = quantile(value, probs = 0.975)
+  ) |> 
+  knitr::kable()
+```
 
