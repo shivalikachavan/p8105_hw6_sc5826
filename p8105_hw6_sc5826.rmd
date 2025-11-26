@@ -377,7 +377,7 @@ cv_df |>
 ```
 
 We can see that the RMSE for the GLM model, optimized with lasso and using tuning parameter `r round(lambda_1se, digits = 2)`, is slightly lower compared to the RMSE for the second (more complex) linear model, which takes into account several interactions. The RMSE for the simple linear model is much higher compared to the other two. The mean RMSE from the cross vaidation are summarized in the table below: 
-```{r include=FALSE}
+```{r echo=FALSE}
 cv_df |> 
   select(starts_with("rmse")) |> 
   pivot_longer(
